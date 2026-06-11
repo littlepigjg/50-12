@@ -25,11 +25,12 @@ const BlockChildrenContainer: React.FC<{
   isEmpty?: boolean;
   emptyText?: string;
   acceptOnlyAtoms?: boolean;
-}> = ({ containerId, containerKind = 'body', children, color, isEmpty, emptyText, acceptOnlyAtoms }) => {
+  acceptOnlyNonCondition?: boolean;
+}> = ({ containerId, containerKind = 'body', children, color, isEmpty, emptyText, acceptOnlyAtoms, acceptOnlyNonCondition }) => {
   const dropId = containerKind === 'conditions' ? `conditions-${containerId}` : `container-${containerId}`;
   const { setNodeRef, isOver } = useDroppable({
     id: dropId,
-    data: { containerId, isContainer: true, containerKind, acceptOnlyAtoms },
+    data: { containerId, isContainer: true, containerKind, acceptOnlyAtoms, acceptOnlyNonCondition },
   });
 
   return (
@@ -339,7 +340,8 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
           containerKind="body"
           color={config.color.replace('bg-', '')}
           isEmpty={!block.children || block.children.length === 0}
-          emptyText={isCompound ? '满足则执行...' : '拖入指令...'}
+          emptyText={isCompound ? '满足则执行（仅基础指令/循环）...' : '拖入指令...'}
+          acceptOnlyNonCondition={isCompound}
         >
           {renderBodyChildren(block.children)}
         </BlockChildrenContainer>

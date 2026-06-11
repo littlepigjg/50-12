@@ -10,7 +10,7 @@ export function createBlock(type: BlockType, extras: Partial<ProgramBlock> = {})
 
   if (type === 'loop') {
     block.repeatCount = extras.repeatCount || 2;
-    block.children = [];
+    if (!block.children) block.children = [];
   } else if (
     type === 'ifWall' ||
     type === 'ifStar' ||
@@ -21,7 +21,7 @@ export function createBlock(type: BlockType, extras: Partial<ProgramBlock> = {})
     type === 'ifNot' ||
     type === 'function'
   ) {
-    block.children = [];
+    if (!block.children) block.children = [];
   }
 
   if (type === 'ifCheck' || type === 'condCheck') {
@@ -30,7 +30,7 @@ export function createBlock(type: BlockType, extras: Partial<ProgramBlock> = {})
   }
 
   if (type === 'ifAnd' || type === 'ifOr' || type === 'ifNot') {
-    block.conditions = [];
+    if (!block.conditions) block.conditions = [];
   }
 
   if (type === 'function') {

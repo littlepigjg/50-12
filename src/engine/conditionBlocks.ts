@@ -134,6 +134,23 @@ export function isCompoundConditionType(type: BlockType): boolean {
   return type === 'ifAnd' || type === 'ifOr' || type === 'ifNot';
 }
 
+export function isConditionType(type: BlockType): boolean {
+  return (
+    type === 'ifWall' ||
+    type === 'ifStar' ||
+    type === 'ifEmpty' ||
+    type === 'ifCheck' ||
+    type === 'ifAnd' ||
+    type === 'ifOr' ||
+    type === 'ifNot' ||
+    type === 'condCheck'
+  );
+}
+
+export function isControlFlowType(type: BlockType): boolean {
+  return type === 'loop' || type === 'ifWall' || type === 'ifStar' || type === 'ifEmpty' || type === 'ifCheck' || type === 'ifAnd' || type === 'ifOr' || type === 'ifNot';
+}
+
 export const ALL_CONDITION_CONFIGS: Record<BlockType, BlockConfig> = {
   ...CONDITION_ATOM_CONFIGS,
   ...CONDITION_BLOCK_CONFIGS,
