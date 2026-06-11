@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import type { ProgramBlock } from '../../engine/types';
-import { BLOCK_CONFIGS } from '../../engine/blocks';
+import type { ConditionDirection, ConditionTarget, ProgramBlock } from '../../engine/types';
+import { BLOCK_CONFIGS, DIRECTION_ICONS, DIRECTION_LABELS, TARGET_ICONS, TARGET_LABELS } from '../../engine/blocks';
 import { updateBlock } from '../../engine/blockUtils';
 
 interface DraggableBlockProps {
@@ -17,13 +17,16 @@ interface DraggableBlockProps {
 
 const BlockChildrenContainer: React.FC<{
   containerId: string;
+  containerKind?: 'body' | 'conditions';
   children?: React.ReactNode;
   color: string;
   isEmpty?: boolean;
-}> = ({ containerId, children, color, isEmpty }) => {
+  emptyText?: string;
+}> = ({ containerId, containerKind = 'body', children, color, isEmpty, emptyText }) => {
+  const dropId = containerKind === 'conditions' ? `conditions-${containerId}` : `container-${containerId}`;
   const { setNodeRef, isOver } = useDroppable({
-    id: `container-${containerId}`,
-    data: { containerId, isContainer: true },
+    id: dropId,
+    data: { containerId, isContainer: true, containerKind },
   });
 
   return (
@@ -37,7 +40,61 @@ const BlockChildrenContainer: React.FC<{
       `}
       style={{ backgroundColor: `${color}33` }}
     >
-      {isEmpty ? <span>拖入指令...</span> : children}
+      {isEmpty ? <span>{emptyText || '拖入指令...'}</span> : children}
+    </div>
+  );
+};
+
+const DirectionSelector: React.FC<{
+  value: ConditionDirection;
+  onChange: (v: ConditionDirection) => void;
+}> = ({ value, onChange }) => {
+  const directions: ConditionDirection[] = ['front', 'right', 'back', 'left'];
+  return (
+    <div className="flex items-center gap-0.5 bg-white/20 rounded-md p-0.5 flex-shrink-0">
+      {directions.map((dir) => (
+        <button
+          key={dir}
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(dir);
+          }}
+          title={DIRECTION_LABELS[dir]}
+          className={`
+            w-6 h-6 rounded flex items-center justify-center text-sm transition-all
+            ${value === dir ? 'bg-white text-gray-800 shadow' : 'text-white/80 hover:bg-white/10'}
+          `}
+        >
+          {DIRECTION_ICONS[dir]}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const TargetSelector: React.FC<{
+  value: ConditionTarget;
+  onChange: (v: ConditionTarget) => void;
+}> = ({ value, onChange }) => {
+  const targets: ConditionTarget[] = ['wall', 'star', 'empty', 'pit'];
+  return (
+    <div className="flex items-center gap-0.5 bg-white/20 rounded-md p-0.5 flex-shrink-0">
+      {targets.map((t) => (
+        <button
+          key={t}
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(t);
+          }}
+          title={TARGET_LABELS[t]}
+          className={`
+            w-6 h-6 rounded flex items-center justify-center text-sm transition-all
+            ${value === t ? 'bg-white text-gray-800 shadow' : 'text-white/80 hover:bg-white/10'}
+          `}
+        >
+          {TARGET_ICONS[t]}
+        </button>
+      ))}
     </div>
   );
 };
@@ -80,7 +137,40 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
     }
   };
 
+  const handleDirectionChange = (dir: ConditionDirection) => {
+    if (onUpdate && allBlocks) {
+      const updated = updateBlock(allBlocks, block.id, { conditionDirection: dir });
+      onUpdate(updated);
+    }
+  };
+
+  const handleTargetChange = (target: ConditionTarget) => {
+    if (onUpdate && allBlocks) {
+      const updated = updateBlock(allBlocks, block.id, { conditionTarget: target });
+      onUpdate(updated);
+    }
+  };
+
   const hasChildren = config.hasChildren && block.children !== undefined;
+  const hasConditions = (block.type === 'ifAnd' || block.type === 'ifOr' || block.type === 'ifNot') && block.conditions !== undefined;
+  const isCompound = block.type === 'ifAnd' || block.type === 'ifOr' || block.type === 'ifNot';
+
+  const renderChildren = (list: ProgramBlock[] | undefined) =>
+    list && list.length > 0 ? (
+      <div className="space-y-0">
+        {list.map((child) => (
+          <DraggableBlock
+            key={child.id}
+            block={child}
+            isHighlighted={isHighlighted}
+            onDelete={onDelete}
+            onUpdate={onUpdate}
+            allBlocks={allBlocks}
+            depth={depth + 1}
+          />
+        ))}
+      </div>
+    ) : null;
 
   return (
     <div
@@ -93,11 +183,11 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
         ${isDragging ? 'rotate-2 scale-105' : ''}
       `}
     >
-      <div className="flex items-center gap-2 p-2 pr-8">
+      <div className="flex items-center gap-2 p-2 pr-8 flex-wrap">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing flex items-center gap-2 flex-1 min-w-0"
+          className="cursor-grab active:cursor-grabbing flex items-center gap-2 flex-1 min-w-0 flex-wrap"
         >
           <span className="text-lg flex-shrink-0">{config.icon}</span>
           <span className="text-sm font-bold truncate">{config.label}</span>
@@ -133,6 +223,20 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
             </div>
           )}
 
+          {block.type === 'ifCheck' && (
+            <>
+              <DirectionSelector
+                value={block.conditionDirection || 'front'}
+                onChange={handleDirectionChange}
+              />
+              <span className="text-xs text-white/80">有</span>
+              <TargetSelector
+                value={block.conditionTarget || 'wall'}
+                onChange={handleTargetChange}
+              />
+            </>
+          )}
+
           {block.type === 'function' && (
             <span className="text-xs bg-white/20 px-2 py-0.5 rounded flex-shrink-0">
               {block.functionId || 'func1'}
@@ -161,27 +265,32 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
         )}
       </div>
 
+      {isCompound && hasConditions && (
+        <div className="mx-2 mb-1">
+          <div className="text-xs text-white/70 px-1 mb-0.5 font-semibold">
+            {block.type === 'ifNot' ? '📋 条件（一个）' : '📋 子条件'}
+          </div>
+          <BlockChildrenContainer
+            containerId={block.id}
+            containerKind="conditions"
+            color={config.color.replace('bg-', '')}
+            isEmpty={!block.conditions || block.conditions.length === 0}
+            emptyText={block.type === 'ifNot' ? '拖入一个条件...' : '拖入条件（AND/OR）...'}
+          >
+            {renderChildren(block.conditions)}
+          </BlockChildrenContainer>
+        </div>
+      )}
+
       {hasChildren && (
         <BlockChildrenContainer
           containerId={block.id}
+          containerKind="body"
           color={config.color.replace('bg-', '')}
           isEmpty={!block.children || block.children.length === 0}
+          emptyText={isCompound ? '满足则执行...' : '拖入指令...'}
         >
-          {block.children && block.children.length > 0 && (
-            <div className="space-y-0">
-              {block.children.map((child) => (
-                <DraggableBlock
-                  key={child.id}
-                  block={child}
-                  isHighlighted={isHighlighted}
-                  onDelete={onDelete}
-                  onUpdate={onUpdate}
-                  allBlocks={allBlocks}
-                  depth={depth + 1}
-                />
-              ))}
-            </div>
-          )}
+          {renderChildren(block.children)}
         </BlockChildrenContainer>
       )}
     </div>

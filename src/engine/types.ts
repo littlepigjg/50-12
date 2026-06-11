@@ -48,6 +48,10 @@ export interface Level {
   hint?: string;
 }
 
+export type ConditionDirection = 'front' | 'back' | 'left' | 'right';
+
+export type ConditionTarget = 'wall' | 'star' | 'empty' | 'pit';
+
 export type BlockType =
   | 'move'
   | 'turnLeft'
@@ -56,6 +60,10 @@ export type BlockType =
   | 'ifWall'
   | 'ifStar'
   | 'ifEmpty'
+  | 'ifCheck'
+  | 'ifAnd'
+  | 'ifOr'
+  | 'ifNot'
   | 'function'
   | 'callFunction';
 
@@ -68,14 +76,19 @@ export interface BlockConfig {
   category: 'basic' | 'control' | 'condition' | 'function';
   hasChildren?: boolean;
   canRepeat?: boolean;
+  hasConditionBody?: boolean;
+  isConditionAtom?: boolean;
 }
 
 export interface ProgramBlock {
   id: string;
   type: BlockType;
   children?: ProgramBlock[];
+  conditions?: ProgramBlock[];
   repeatCount?: number;
   functionId?: string;
+  conditionDirection?: ConditionDirection;
+  conditionTarget?: ConditionTarget;
 }
 
 export interface Program {

@@ -1,5 +1,6 @@
 import type {
   CellType,
+  ConditionDirection,
   Direction,
   ExecutionState,
   Level,
@@ -46,6 +47,32 @@ export function getForwardPosition(
   robot: RobotState
 ): Position {
   const vec = DirectionVectors[robot.direction];
+  return {
+    x: robot.position.x + vec.dx,
+    y: robot.position.y + vec.dy,
+  };
+}
+
+export function getPositionAtDirection(
+  robot: RobotState,
+  direction: ConditionDirection
+): Position {
+  let dir: Direction = robot.direction;
+  switch (direction) {
+    case 'front':
+      dir = robot.direction;
+      break;
+    case 'back':
+      dir = ((robot.direction + 2) % 4) as Direction;
+      break;
+    case 'left':
+      dir = ((robot.direction + 3) % 4) as Direction;
+      break;
+    case 'right':
+      dir = ((robot.direction + 1) % 4) as Direction;
+      break;
+  }
+  const vec = DirectionVectors[dir];
   return {
     x: robot.position.x + vec.dx,
     y: robot.position.y + vec.dy,
@@ -119,7 +146,11 @@ function flattenBlocks(
     } else if (
       block.type === 'ifWall' ||
       block.type === 'ifStar' ||
-      block.type === 'ifEmpty'
+      block.type === 'ifEmpty' ||
+      block.type === 'ifCheck' ||
+      block.type === 'ifAnd' ||
+      block.type === 'ifOr' ||
+      block.type === 'ifNot'
     ) {
       if (block.children) {
         result.push(
@@ -163,7 +194,7 @@ export function generateExecutionPlan(
 
   steps.push({ state: { ...state, robot: cloneRobotState(state.robot) } });
 
-  function evaluateCondition(
+  function evaluateSingleCondition(
     block: ProgramBlock,
     robot: RobotState
   ): boolean {
@@ -179,8 +210,55 @@ export function generateExecutionPlan(
       }
       case 'ifEmpty':
         return isWalkable(level, forward);
+      case 'ifCheck': {
+        const dir = block.conditionDirection || 'front';
+        const target = block.conditionTarget || 'wall';
+        const pos = getPositionAtDirection(robot, dir);
+        if (!isValidPosition(level, pos)) {
+          return target === 'wall';
+        }
+        const cell = getCellAt(level, pos);
+        switch (target) {
+          case 'wall':
+            return !isWalkable(level, pos);
+          case 'empty':
+            return isWalkable(level, pos);
+          case 'star': {
+            const hasUncollected = state.robot.stars.some((s) =>
+              positionEquals(s, pos)
+            );
+            return hasUncollected;
+          }
+          case 'pit':
+            return cell === 'pit';
+          default:
+            return false;
+        }
+      }
       default:
         return false;
+    }
+  }
+
+  function evaluateCondition(
+    block: ProgramBlock,
+    robot: RobotState
+  ): boolean {
+    switch (block.type) {
+      case 'ifAnd': {
+        if (!block.conditions || block.conditions.length === 0) return false;
+        return block.conditions.every((child) => evaluateCondition(child, robot));
+      }
+      case 'ifOr': {
+        if (!block.conditions || block.conditions.length === 0) return false;
+        return block.conditions.some((child) => evaluateCondition(child, robot));
+      }
+      case 'ifNot': {
+        if (!block.conditions || block.conditions.length === 0) return true;
+        return !evaluateCondition(block.conditions[0], robot);
+      }
+      default:
+        return evaluateSingleCondition(block, robot);
     }
   }
 
@@ -256,7 +334,11 @@ export function generateExecutionPlan(
 
       case 'ifWall':
       case 'ifStar':
-      case 'ifEmpty': {
+      case 'ifEmpty':
+      case 'ifCheck':
+      case 'ifAnd':
+      case 'ifOr':
+      case 'ifNot': {
         if (evaluateCondition(block, state.robot)) {
           if (block.children) {
             for (const child of block.children) {

@@ -115,20 +115,31 @@ export const ProgramArea: React.FC<ProgramAreaProps> = ({
   const findContainerAndIndex = (
     allBlocks: ProgramBlock[],
     targetId: string
-  ): { containerId: string | null; index: number; isContainer: boolean } | null => {
+  ): { containerId: string | null; index: number; isContainer: boolean; containerKind: 'body' | 'conditions' | null } | null => {
     for (const block of allBlocks) {
       if (block.id === targetId) {
-        return { containerId: null, index: allBlocks.indexOf(block), isContainer: false };
+        return { containerId: null, index: allBlocks.indexOf(block), isContainer: false, containerKind: null };
       }
       if (block.children) {
         const childIndex = block.children.findIndex((c) => c.id === targetId);
         if (childIndex !== -1) {
-          return { containerId: block.id, index: childIndex, isContainer: false };
+          return { containerId: block.id, index: childIndex, isContainer: false, containerKind: 'body' };
         }
         if (`container-${block.id}` === targetId) {
-          return { containerId: block.id, index: -1, isContainer: true };
+          return { containerId: block.id, index: -1, isContainer: true, containerKind: 'body' };
         }
         const found = findContainerAndIndex(block.children, targetId);
+        if (found) return found;
+      }
+      if (block.conditions) {
+        const condIndex = block.conditions.findIndex((c) => c.id === targetId);
+        if (condIndex !== -1) {
+          return { containerId: block.id, index: condIndex, isContainer: false, containerKind: 'conditions' };
+        }
+        if (`conditions-${block.id}` === targetId) {
+          return { containerId: block.id, index: -1, isContainer: true, containerKind: 'conditions' };
+        }
+        const found = findContainerAndIndex(block.conditions, targetId);
         if (found) return found;
       }
     }
@@ -189,6 +200,13 @@ export const ProgramArea: React.FC<ProgramAreaProps> = ({
       return;
     }
 
+    if (overId.startsWith('conditions-')) {
+      const containerId = overId.replace('conditions-', '');
+      updatedBlocks = insertBlockIntoContainer(updatedBlocks, containerId, newBlock);
+      onBlocksChange(updatedBlocks);
+      return;
+    }
+
     const targetInfo = findContainerAndIndex(updatedBlocks, overId);
     if (targetInfo) {
       if (targetInfo.isContainer) {
@@ -243,7 +261,7 @@ export const ProgramArea: React.FC<ProgramAreaProps> = ({
         <div className="flex-1 overflow-y-auto">
           <DropZone id={dropZoneId} label={emptyText}>
             {blocks.length > 0 && (
-              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={collectAllBlockIds(blocks)} strategy={verticalListSortingStrategy}>
                 {blocks.map((block) => (
                   <DraggableBlock
                     key={block.id}
@@ -294,8 +312,25 @@ function countBlocks(blocks: ProgramBlock[]): number {
     if (block.children) {
       count += countBlocks(block.children);
     }
+    if (block.conditions) {
+      count += countBlocks(block.conditions);
+    }
   }
   return count;
+}
+
+function collectAllBlockIds(blocks: ProgramBlock[]): string[] {
+  const ids: string[] = [];
+  for (const block of blocks) {
+    ids.push(block.id);
+    if (block.children) {
+      ids.push(...collectAllBlockIds(block.children));
+    }
+    if (block.conditions) {
+      ids.push(...collectAllBlockIds(block.conditions));
+    }
+  }
+  return ids;
 }
 
 export default ProgramArea;

@@ -15,9 +15,22 @@ export function createBlock(type: BlockType, extras: Partial<ProgramBlock> = {})
     type === 'ifWall' ||
     type === 'ifStar' ||
     type === 'ifEmpty' ||
+    type === 'ifCheck' ||
+    type === 'ifAnd' ||
+    type === 'ifOr' ||
+    type === 'ifNot' ||
     type === 'function'
   ) {
     block.children = [];
+  }
+
+  if (type === 'ifCheck') {
+    block.conditionDirection = extras.conditionDirection || 'front';
+    block.conditionTarget = extras.conditionTarget || 'wall';
+  }
+
+  if (type === 'ifAnd' || type === 'ifOr' || type === 'ifNot') {
+    block.conditions = [];
   }
 
   if (type === 'function') {
@@ -36,6 +49,7 @@ export function cloneBlock(block: ProgramBlock): ProgramBlock {
     ...block,
     id: uuidv4(),
     children: block.children ? block.children.map(cloneBlock) : undefined,
+    conditions: block.conditions ? block.conditions.map(cloneBlock) : undefined,
   };
 }
 
@@ -47,6 +61,10 @@ export function findBlockById(
     if (block.id === id) return block;
     if (block.children) {
       const found = findBlockById(block.children, id);
+      if (found) return found;
+    }
+    if (block.conditions) {
+      const found = findBlockById(block.conditions, id);
       if (found) return found;
     }
   }
@@ -62,6 +80,7 @@ export function removeBlockById(
     .map((b) => ({
       ...b,
       children: b.children ? removeBlockById(b.children, id) : undefined,
+      conditions: b.conditions ? removeBlockById(b.conditions, id) : undefined,
     }));
 }
 
@@ -76,6 +95,9 @@ export function insertBlockAfter(
       ...block,
       children: block.children
         ? insertBlockAfter(block.children, targetId, newBlock)
+        : undefined,
+      conditions: block.conditions
+        ? insertBlockAfter(block.conditions, targetId, newBlock)
         : undefined,
     });
     if (block.id === targetId) {
@@ -92,19 +114,33 @@ export function insertBlockIntoContainer(
   index: number = -1
 ): ProgramBlock[] {
   return blocks.map((block) => {
-    if (block.id === containerId && block.children) {
-      const newChildren = [...block.children];
-      if (index >= 0 && index <= newChildren.length) {
-        newChildren.splice(index, 0, newBlock);
-      } else {
-        newChildren.push(newBlock);
+    if (block.id === containerId) {
+      if (block.children) {
+        const newChildren = [...block.children];
+        if (index >= 0 && index <= newChildren.length) {
+          newChildren.splice(index, 0, newBlock);
+        } else {
+          newChildren.push(newBlock);
+        }
+        return { ...block, children: newChildren };
       }
-      return { ...block, children: newChildren };
+      if (block.conditions) {
+        const newConditions = [...block.conditions];
+        if (index >= 0 && index <= newConditions.length) {
+          newConditions.splice(index, 0, newBlock);
+        } else {
+          newConditions.push(newBlock);
+        }
+        return { ...block, conditions: newConditions };
+      }
     }
     return {
       ...block,
       children: block.children
         ? insertBlockIntoContainer(block.children, containerId, newBlock, index)
+        : undefined,
+      conditions: block.conditions
+        ? insertBlockIntoContainer(block.conditions, containerId, newBlock, index)
         : undefined,
     };
   });
@@ -122,6 +158,7 @@ export function updateBlock(
     return {
       ...block,
       children: block.children ? updateBlock(block.children, id, updates) : undefined,
+      conditions: block.conditions ? updateBlock(block.conditions, id, updates) : undefined,
     };
   });
 }
