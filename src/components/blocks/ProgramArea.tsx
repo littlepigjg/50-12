@@ -18,6 +18,7 @@ import {
 import { useDroppable } from '@dnd-kit/core';
 import type { BlockType, ProgramBlock } from '../../engine/types';
 import { BLOCK_CONFIGS } from '../../engine/blocks';
+import { isConditionAtomType } from '../../engine/conditionBlocks';
 import {
   cloneBlock,
   createBlock,
@@ -201,6 +202,7 @@ export const ProgramArea: React.FC<ProgramAreaProps> = ({
     }
 
     if (overId.startsWith('conditions-')) {
+      if (!isConditionAtomType(newBlock.type)) return;
       const containerId = overId.replace('conditions-', '');
       updatedBlocks = insertBlockIntoContainer(updatedBlocks, containerId, newBlock);
       onBlocksChange(updatedBlocks);
@@ -209,6 +211,11 @@ export const ProgramArea: React.FC<ProgramAreaProps> = ({
 
     const targetInfo = findContainerAndIndex(updatedBlocks, overId);
     if (targetInfo) {
+      const insertingIntoConditions =
+        targetInfo.containerKind === 'conditions';
+      if (insertingIntoConditions && !isConditionAtomType(newBlock.type)) {
+        return;
+      }
       if (targetInfo.isContainer) {
         updatedBlocks = insertBlockIntoContainer(
           updatedBlocks,

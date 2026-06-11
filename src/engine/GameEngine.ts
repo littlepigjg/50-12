@@ -210,7 +210,8 @@ export function generateExecutionPlan(
       }
       case 'ifEmpty':
         return isWalkable(level, forward);
-      case 'ifCheck': {
+      case 'ifCheck':
+      case 'condCheck': {
         const dir = block.conditionDirection || 'front';
         const target = block.conditionTarget || 'wall';
         const pos = getPositionAtDirection(robot, dir);

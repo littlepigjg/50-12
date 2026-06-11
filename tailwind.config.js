@@ -24,6 +24,7 @@ export default {
           'compound-and': '#dc2626',
           'compound-or': '#f97316',
           'compound-not': '#6366f1',
+          atom: '#0ea5e9',
           function: '#06b6d4',
         },
       },

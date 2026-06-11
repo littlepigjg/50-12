@@ -24,7 +24,7 @@ export function createBlock(type: BlockType, extras: Partial<ProgramBlock> = {})
     block.children = [];
   }
 
-  if (type === 'ifCheck') {
+  if (type === 'ifCheck' || type === 'condCheck') {
     block.conditionDirection = extras.conditionDirection || 'front';
     block.conditionTarget = extras.conditionTarget || 'wall';
   }

@@ -1,34 +1,17 @@
-import type { BlockConfig, BlockType, ConditionDirection, ConditionTarget } from './types';
+import type { BlockConfig, BlockType } from './types';
+import { ALL_CONDITION_CONFIGS, CATEGORY_NAMES } from './conditionBlocks';
 
-export const DIRECTION_LABELS: Record<ConditionDirection, string> = {
-  front: '前方',
-  back: '后方',
-  left: '左方',
-  right: '右方',
-};
+export { CATEGORY_NAMES } from './conditionBlocks';
+export {
+  DIRECTION_LABELS,
+  DIRECTION_ICONS,
+  TARGET_LABELS,
+  TARGET_ICONS,
+  isConditionAtomType,
+  isCompoundConditionType,
+} from './conditionBlocks';
 
-export const DIRECTION_ICONS: Record<ConditionDirection, string> = {
-  front: '⬆️',
-  back: '⬇️',
-  left: '⬅️',
-  right: '➡️',
-};
-
-export const TARGET_LABELS: Record<ConditionTarget, string> = {
-  wall: '墙',
-  star: '星星',
-  empty: '可通行',
-  pit: '陷阱',
-};
-
-export const TARGET_ICONS: Record<ConditionTarget, string> = {
-  wall: '🧱',
-  star: '⭐',
-  empty: '⬜',
-  pit: '🕳️',
-};
-
-export const BLOCK_CONFIGS: Record<BlockType, BlockConfig> = {
+const BASIC_BLOCK_CONFIGS: Record<BlockType, BlockConfig> = {
   move: {
     type: 'move',
     label: '前进',
@@ -63,77 +46,6 @@ export const BLOCK_CONFIGS: Record<BlockType, BlockConfig> = {
     hasChildren: true,
     canRepeat: true,
   },
-  ifWall: {
-    type: 'ifWall',
-    label: '如果前方是墙',
-    color: 'bg-block-condition',
-    icon: '🧱',
-    description: '如果前方有墙壁，则执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
-  ifStar: {
-    type: 'ifStar',
-    label: '如果前方有星星',
-    color: 'bg-block-condition',
-    icon: '⭐',
-    description: '如果前方有星星，则执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
-  ifEmpty: {
-    type: 'ifEmpty',
-    label: '如果前方是空',
-    color: 'bg-block-condition',
-    icon: '⬜',
-    description: '如果前方可以通行，则执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
-  ifCheck: {
-    type: 'ifCheck',
-    label: '检查条件',
-    color: 'bg-block-condition',
-    icon: '🔍',
-    description: '检查指定方向是否有指定目标，可自由配置方向和目标',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-    isConditionAtom: true,
-  },
-  ifAnd: {
-    type: 'ifAnd',
-    label: '并且 (全部满足)',
-    color: 'bg-block-compound-and',
-    icon: '🔗',
-    description: '所有子条件都满足时，才执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
-  ifOr: {
-    type: 'ifOr',
-    label: '或者 (任一满足)',
-    color: 'bg-block-compound-or',
-    icon: '🔀',
-    description: '任意一个子条件满足时，就执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
-  ifNot: {
-    type: 'ifNot',
-    label: '否则 (不满足)',
-    color: 'bg-block-compound-not',
-    icon: '🚫',
-    description: '子条件不满足时，执行内部指令',
-    category: 'condition',
-    hasChildren: true,
-    hasConditionBody: true,
-  },
   function: {
     type: 'function',
     label: '定义函数',
@@ -151,11 +63,9 @@ export const BLOCK_CONFIGS: Record<BlockType, BlockConfig> = {
     description: '调用已定义的函数',
     category: 'function',
   },
-};
+} as unknown as Record<BlockType, BlockConfig>;
 
-export const CATEGORY_NAMES: Record<string, string> = {
-  basic: '基础指令',
-  control: '流程控制',
-  condition: '条件判断',
-  function: '函数',
-};
+export const BLOCK_CONFIGS: Record<BlockType, BlockConfig> = {
+  ...BASIC_BLOCK_CONFIGS,
+  ...ALL_CONDITION_CONFIGS,
+} as Record<BlockType, BlockConfig>;

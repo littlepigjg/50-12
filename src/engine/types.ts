@@ -64,6 +64,7 @@ export type BlockType =
   | 'ifAnd'
   | 'ifOr'
   | 'ifNot'
+  | 'condCheck'
   | 'function'
   | 'callFunction';
 
@@ -73,7 +74,7 @@ export interface BlockConfig {
   color: string;
   icon: string;
   description: string;
-  category: 'basic' | 'control' | 'condition' | 'function';
+  category: 'basic' | 'control' | 'condition' | 'condition-atom' | 'function';
   hasChildren?: boolean;
   canRepeat?: boolean;
   hasConditionBody?: boolean;

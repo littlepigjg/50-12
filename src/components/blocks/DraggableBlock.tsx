@@ -4,7 +4,9 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { ConditionDirection, ConditionTarget, ProgramBlock } from '../../engine/types';
 import { BLOCK_CONFIGS, DIRECTION_ICONS, DIRECTION_LABELS, TARGET_ICONS, TARGET_LABELS } from '../../engine/blocks';
+import { isConditionAtomType, isCompoundConditionType } from '../../engine/conditionBlocks';
 import { updateBlock } from '../../engine/blockUtils';
+import { ConditionAtomBlock } from './ConditionAtomBlock';
 
 interface DraggableBlockProps {
   block: ProgramBlock;
@@ -22,11 +24,12 @@ const BlockChildrenContainer: React.FC<{
   color: string;
   isEmpty?: boolean;
   emptyText?: string;
-}> = ({ containerId, containerKind = 'body', children, color, isEmpty, emptyText }) => {
+  acceptOnlyAtoms?: boolean;
+}> = ({ containerId, containerKind = 'body', children, color, isEmpty, emptyText, acceptOnlyAtoms }) => {
   const dropId = containerKind === 'conditions' ? `conditions-${containerId}` : `container-${containerId}`;
   const { setNodeRef, isOver } = useDroppable({
     id: dropId,
-    data: { containerId, isContainer: true, containerKind },
+    data: { containerId, isContainer: true, containerKind, acceptOnlyAtoms },
   });
 
   return (
@@ -119,7 +122,7 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
     isDragging,
   } = useSortable({
     id: block.id,
-    data: { block, fromProgram: true },
+    data: { block, fromProgram: true, isConditionAtom: isConditionAtomType(block.type) },
   });
 
   const style = {
@@ -151,11 +154,24 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
     }
   };
 
-  const hasChildren = config.hasChildren && block.children !== undefined;
-  const hasConditions = (block.type === 'ifAnd' || block.type === 'ifOr' || block.type === 'ifNot') && block.conditions !== undefined;
-  const isCompound = block.type === 'ifAnd' || block.type === 'ifOr' || block.type === 'ifNot';
+  if (isConditionAtomType(block.type)) {
+    return (
+      <ConditionAtomBlock
+        block={block}
+        isHighlighted={isHighlighted}
+        onDelete={onDelete}
+        onUpdate={onUpdate}
+        allBlocks={allBlocks}
+        depth={depth}
+      />
+    );
+  }
 
-  const renderChildren = (list: ProgramBlock[] | undefined) =>
+  const hasChildren = config.hasChildren && block.children !== undefined;
+  const hasConditions = isCompoundConditionType(block.type) && block.conditions !== undefined;
+  const isCompound = isCompoundConditionType(block.type);
+
+  const renderBodyChildren = (list: ProgramBlock[] | undefined) =>
     list && list.length > 0 ? (
       <div className="space-y-0">
         {list.map((child) => (
@@ -168,6 +184,30 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
             allBlocks={allBlocks}
             depth={depth + 1}
           />
+        ))}
+      </div>
+    ) : null;
+
+  const renderConditionAtoms = (list: ProgramBlock[] | undefined) =>
+    list && list.length > 0 ? (
+      <div className="space-y-0.5">
+        {list.map((child, idx) => (
+          <React.Fragment key={child.id}>
+            {idx > 0 && isCompound && block.type !== 'ifNot' && (
+              <div className="text-xs text-white/80 font-bold text-center py-0.5">
+                {block.type === 'ifAnd' ? '∧ 并且' : '∨ 或者'}
+              </div>
+            )}
+            <ConditionAtomBlock
+              block={child}
+              isHighlighted={isHighlighted}
+              onDelete={onDelete}
+              onUpdate={onUpdate}
+              allBlocks={allBlocks}
+              depth={depth + 1}
+              compact
+            />
+          </React.Fragment>
         ))}
       </div>
     ) : null;
@@ -234,6 +274,7 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
                 value={block.conditionTarget || 'wall'}
                 onChange={handleTargetChange}
               />
+              <span className="text-xs text-white/70">→ 则执行</span>
             </>
           )}
 
@@ -266,18 +307,28 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
       </div>
 
       {isCompound && hasConditions && (
-        <div className="mx-2 mb-1">
-          <div className="text-xs text-white/70 px-1 mb-0.5 font-semibold">
-            {block.type === 'ifNot' ? '📋 条件（一个）' : '📋 子条件'}
+        <div className="mx-2 mb-1 bg-black/10 rounded-lg border border-white/20 p-2">
+          <div className="text-xs text-white/90 px-1 mb-1 font-bold flex items-center gap-1">
+            <span>📋</span>
+            {block.type === 'ifNot'
+              ? '以下条件 不满足 时执行：'
+              : block.type === 'ifAnd'
+              ? '以下 全部条件 都满足 时执行：'
+              : '以下 任一条件 满足 时执行：'}
           </div>
           <BlockChildrenContainer
             containerId={block.id}
             containerKind="conditions"
             color={config.color.replace('bg-', '')}
             isEmpty={!block.conditions || block.conditions.length === 0}
-            emptyText={block.type === 'ifNot' ? '拖入一个条件...' : '拖入条件（AND/OR）...'}
+            emptyText={
+              block.type === 'ifNot'
+                ? '拖入「🔬检测条件」积木（1个）'
+                : '拖入「🔬检测条件」积木（可多个）'
+            }
+            acceptOnlyAtoms
           >
-            {renderChildren(block.conditions)}
+            {renderConditionAtoms(block.conditions)}
           </BlockChildrenContainer>
         </div>
       )}
@@ -290,7 +341,7 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
           isEmpty={!block.children || block.children.length === 0}
           emptyText={isCompound ? '满足则执行...' : '拖入指令...'}
         >
-          {renderChildren(block.children)}
+          {renderBodyChildren(block.children)}
         </BlockChildrenContainer>
       )}
     </div>

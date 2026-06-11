@@ -2,7 +2,8 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { BlockType } from '../../engine/types';
-import { BLOCK_CONFIGS } from '../../engine/blocks';
+import { BLOCK_CONFIGS, CATEGORY_NAMES } from '../../engine/blocks';
+import { isConditionAtomType } from '../../engine/conditionBlocks';
 
 interface BlockPaletteItemProps {
   type: BlockType;
@@ -13,7 +14,7 @@ export const BlockPaletteItem: React.FC<BlockPaletteItemProps> = ({ type, disabl
   const config = BLOCK_CONFIGS[type];
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `palette-${type}`,
-    data: { type, fromPalette: true },
+    data: { type, fromPalette: true, isConditionAtom: isConditionAtomType(type) },
     disabled,
   });
 
@@ -52,13 +53,7 @@ interface BlockPaletteProps {
 }
 
 export const BlockPalette: React.FC<BlockPaletteProps> = ({ allowedBlocks, disabled }) => {
-  const categories = ['basic', 'control', 'condition', 'function'] as const;
-  const categoryNames: Record<string, string> = {
-    basic: '基础指令',
-    control: '流程控制',
-    condition: '条件判断',
-    function: '函数',
-  };
+  const categories = ['basic', 'control', 'condition', 'condition-atom', 'function'] as const;
 
   return (
     <div className="bg-white/90 rounded-2xl p-4 shadow-xl h-full overflow-y-auto">
@@ -74,7 +69,7 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({ allowedBlocks, disab
           return (
             <div key={category}>
               <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">
-                {categoryNames[category]}
+                {CATEGORY_NAMES[category]}
               </p>
               <div className="flex flex-wrap gap-2">
                 {blocks.map((type) => (
@@ -92,6 +87,8 @@ export const BlockPalette: React.FC<BlockPaletteProps> = ({ allowedBlocks, disab
       <div className="mt-4 pt-4 border-t border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
           💡 拖拽指令块到右侧的"程序区域"，编排你的程序吧！
+          <br />
+          🔬 <b>检测条件</b>积木用于在「并且/或者/否则」中组合条件。
         </p>
       </div>
     </div>

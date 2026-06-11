@@ -32,6 +32,7 @@ const ALL_BLOCKS: BlockType[] = [
   'ifAnd',
   'ifOr',
   'ifNot',
+  'condCheck',
   'function',
   'callFunction',
 ];
@@ -50,6 +51,7 @@ const CONDITION_BLOCKS: BlockType[] = [
   'ifAnd',
   'ifOr',
   'ifNot',
+  'condCheck',
 ];
 const FUNCTION_BLOCKS: BlockType[] = [
   'move',
@@ -62,6 +64,7 @@ const FUNCTION_BLOCKS: BlockType[] = [
   'ifAnd',
   'ifOr',
   'ifNot',
+  'condCheck',
   'function',
   'callFunction',
 ];
